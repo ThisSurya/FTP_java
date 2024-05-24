@@ -4,11 +4,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import surya.project.GlobalAuth.Global;
 import surya.project.ftpservice.AuthService;
 
-import java.io.IOException;
-
-public class HelloController {
+public class LoginController {
     @FXML
     private Label welcomeText;
 
@@ -31,6 +30,12 @@ public class HelloController {
     @FXML
     protected Label checklabel = new Label();
 
+    private HelloApplication app;
+
+    public void setApp(HelloApplication app) {
+        this.app = app;
+    }
+
     @FXML
     protected void submitForm() throws Exception {
 
@@ -40,9 +45,9 @@ public class HelloController {
                 Integer.parseInt(port.getText()), username.getText(), password.getText());
 
         boolean result = ftp.isConnected();
-        checklabel.setVisible(true);
         if(result){
-            checklabel.setText("Login Successful");
+            Global.globalClient = ftp;
+            app.showDashboard();
         }else {
             checklabel.setText("Login Failed");
         }
