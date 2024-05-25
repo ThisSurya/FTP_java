@@ -47,6 +47,7 @@
                         <Button fx:id="backRemoteButton" mnemonicParsing="false" text="BACK" />
                         <Button fx:id="createDirButton" mnemonicParsing="false" text="CREATE DIR" />
                         <Button fx:id="deleteButton" mnemonicParsing="false" text="DELETE" />
+                        <Button fx:id="downloadButton" mnemonicParsing="false" text="DOWNLOAD" />
                      </items>
                   </ToolBar>
                </children>

@@ -1,11 +1,13 @@
 package surya.project.ftpservice;
 import java.io.*;
 
+import javafx.collections.ObservableList;
 import org.apache.commons.net.PrintCommandListener;
 import org.apache.commons.net.ProtocolCommandListener;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
+import surya.project.components.DirInfo;
 
 
 public class AuthService {
@@ -55,14 +57,23 @@ public class AuthService {
 
     public boolean uploadFile(String localpath, String remotename) throws FileNotFoundException, IOException {
         File file = new File(localpath);
-        System.out.println(file.isDirectory());
         InputStream fileupload = new FileInputStream(file);
         boolean result = ftpclient.storeFile(remotename, fileupload);
-        System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b",
+        System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
                 System.currentTimeMillis(), remotename, result);
-        System.out.println();
 
         return result;
+    }
+
+    public void uploadFile(ObservableList<DirInfo> localpaths) throws FileNotFoundException, IOException {
+        for(DirInfo f: localpaths){
+            String path = f.getPath();
+            File file = new File(path);
+            InputStream fileupload = new FileInputStream(file);
+            boolean result = ftpclient.storeFile(f.getName(), fileupload);
+            System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
+                    System.currentTimeMillis(), f.getName(), result);
+        }
     }
 
     public boolean deleteFile(String remotepath) throws Exception {
@@ -72,12 +83,17 @@ public class AuthService {
         return ftpclient.removeDirectory(remotepath);
     }
 
-    public void downloadFile(String remotepath, FTPFile f) throws FileNotFoundException, IOException {
+    public boolean downloadFile(String remotepath, String workftpdir) throws FileNotFoundException, IOException {
+        changeWorkDir(remotepath);
+        FTPFile f = ftpclient.mlistFile(remotepath);
         String dir = new  File("").getAbsolutePath() + "/downloads/" + f.getName();
-        File file = new File(dir);
-        OutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+//        File file = new File(dir);
+        FileOutputStream out = new FileOutputStream(dir);
+        changeWorkDir(workftpdir);
 
         boolean result = ftpclient.retrieveFile(remotepath, out);
+        System.out.printf("[downloadFIle] [%d] is success to download file : %s -> %b \n", System.currentTimeMillis(), remotepath, result);
+        return result;
     }
 
     public boolean newDirectory(String remotepath) throws FileNotFoundException, IOException {
@@ -86,10 +102,6 @@ public class AuthService {
     }
 
     public void renameFolder(){
-
-    }
-
-    public void backFTP(){
 
     }
 

@@ -4,10 +4,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import org.apache.commons.net.ftp.FTPFile;
 import surya.project.GlobalAuth.Global;
@@ -52,6 +51,8 @@ public class DashboardController {
     private Button backLocalButton;
     @FXML
     private Button backRemoteButton;
+    @FXML
+    private Button downloadButton;
 
     private HelloApplication app;
 
@@ -64,10 +65,14 @@ public class DashboardController {
 
     private Stack<String> lastpath;
     private String worklocaldir;
+    private ObservableList<DirInfo> selectedItems;
 
     public void Initialize(HelloApplication app) throws Exception {
         this.app = app;
 
+//
+//        Initialization
+//
         lastpath = new Stack<String>();
         lastpathftp = new Stack<String>();
         workftpdir = Global.globalClient.getClient().printWorkingDirectory();
@@ -101,9 +106,14 @@ public class DashboardController {
         TableProgressView.setEditable(true);
         TableProgressView.getColumns().addAll(TableProgressFilename, TableProgressType, TableProgressSize);
 
+        TableLocalView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        TableRemoteView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         deleteButton.setDisable(true);
         backLocalButton.setDisable(true);
         backRemoteButton.setDisable(true);
+        downloadButton.setDisable(true);
+
 
 //
 //        FILL THE TABLE WITH CONTENT
@@ -116,11 +126,13 @@ public class DashboardController {
 //
 
         TableLocalView.setOnMouseClicked((event) -> {clickOnLocalTable(event);});
+        TableLocalView.setOnKeyPressed((event) -> multipleSelectMode(event));
         TableRemoteView.setOnMouseClicked((event) -> {clickOnRemoteTable(event);});
         deleteButton.setOnAction((event) -> {deleteOnRemote();});
         createDirButton.setOnAction((event) -> {newDirectory();});
         backLocalButton.setOnAction((event) -> {backDirectoryLocal();});
         backRemoteButton.setOnAction((event) -> {backDirectoryFTP();});
+        downloadButton.setOnAction((event) -> {downloadFile();});
     }
 
     public void showTableLocalFile(String path) throws Exception {
@@ -186,6 +198,7 @@ public class DashboardController {
 
     private void clickOnLocalTable(MouseEvent event){
         DirInfo checkdir = TableLocalView.getSelectionModel().getSelectedItem();
+
         if(!checkdir.getPath().isEmpty()){
             this.filepathFTP = checkdir.getPath();
         }
@@ -197,12 +210,19 @@ public class DashboardController {
                     showTableLocalFile(checkdir.getPath());
                 }
                 else if(new File(checkdir.getPath()).isFile()){
-                    Global.globalClient.uploadFile(checkdir.getPath(), checkdir.getName());
-                    showTableRemoteFile("/");
+//                    Global.globalClient.uploadFile(checkdir.getPath(), checkdir.getName());
+                    this.uploadFile(checkdir.getPath(), checkdir.getName());
+                    showTableRemoteFile(this.workftpdir);
                 }
             }catch(Exception e){
                 System.out.println(e);
             }
+        }
+    }
+
+    private void multipleSelectMode(KeyEvent event){
+        if(event.getCode().equals("CONTROL")){
+            selectedItems = TableLocalView.getSelectionModel().getSelectedItems();
         }
     }
 
@@ -212,7 +232,9 @@ public class DashboardController {
         if(!checkdir.getPath().isEmpty()){
             this.filepathFTP = checkdir.getPath() +"/"+ checkdir.getName();
             deleteButton.setDisable(false);
+            downloadButton.setDisable(false);
         }else {
+            downloadButton.setDisable(true);
             deleteButton.setDisable(true);
             System.out.println("Pliss if u want to delete a file select random file first!!");
         }
@@ -222,10 +244,10 @@ public class DashboardController {
                 boolean isDir = Global.globalClient.getClient().changeWorkingDirectory(this.filepathFTP);
                 if(isDir){
                     lastpathftp.push(this.workftpdir);
-                    Global.globalClient.changeWorkDir(this.filepathFTP);
+//                    Global.globalClient.changeWorkDir(this.filepathFTP);
                     showTableRemoteFile(this.filepathFTP);
                 }else {
-                    System.out.println("ready to download....");
+                    this.downloadFile();
                 }
             }catch(Exception e){
                 System.out.println(e);
@@ -268,6 +290,30 @@ public class DashboardController {
             String pathDir = Global.globalClient.getClient().printWorkingDirectory() + "/New Folder";
             Global.globalClient.newDirectory(pathDir);
             showTableRemoteFile(workftpdir);
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    private void downloadFile(){
+        try{
+            Global.globalClient.downloadFile(this.filepathFTP, this.workftpdir);
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    private void uploadFile(String filepath, String name){
+        try{
+            Global.globalClient.uploadFile(filepath, name);
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    private void uploadFile(ObservableList<DirInfo> filepaths){
+        try{
+            Global.globalClient.uploadFile(filepaths);
         }catch(Exception e){
             System.out.println(e);
         }
