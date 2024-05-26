@@ -53,6 +53,8 @@ public class DashboardController {
     private Button backRemoteButton;
     @FXML
     private Button downloadButton;
+    @FXML
+    private Button uploadButton;
 
     private HelloApplication app;
 
@@ -65,7 +67,8 @@ public class DashboardController {
 
     private Stack<String> lastpath;
     private String worklocaldir;
-    private ObservableList<DirInfo> selectedItems;
+    private ObservableList<DirInfo> selectedItemsLocal;
+    private ObservableList<DirInfo> selectedItemsftp;
 
     public void Initialize(HelloApplication app) throws Exception {
         this.app = app;
@@ -126,13 +129,13 @@ public class DashboardController {
 //
 
         TableLocalView.setOnMouseClicked((event) -> {clickOnLocalTable(event);});
-        TableLocalView.setOnKeyPressed((event) -> multipleSelectMode(event));
         TableRemoteView.setOnMouseClicked((event) -> {clickOnRemoteTable(event);});
         deleteButton.setOnAction((event) -> {deleteOnRemote();});
         createDirButton.setOnAction((event) -> {newDirectory();});
         backLocalButton.setOnAction((event) -> {backDirectoryLocal();});
         backRemoteButton.setOnAction((event) -> {backDirectoryFTP();});
         downloadButton.setOnAction((event) -> {downloadFile();});
+        uploadButton.setOnAction((event) -> {uploadFile();});
     }
 
     public void showTableLocalFile(String path) throws Exception {
@@ -198,6 +201,13 @@ public class DashboardController {
 
     private void clickOnLocalTable(MouseEvent event){
         DirInfo checkdir = TableLocalView.getSelectionModel().getSelectedItem();
+        selectedItemsLocal = TableLocalView.getSelectionModel().getSelectedItems();
+
+        if(selectedItemsLocal.isEmpty() || checkdir.getName().isEmpty()){
+            uploadButton.setDisable(true);
+        }else {
+            uploadButton.setDisable(false);
+        }
 
         if(!checkdir.getPath().isEmpty()){
             this.filepathFTP = checkdir.getPath();
@@ -210,8 +220,9 @@ public class DashboardController {
                     showTableLocalFile(checkdir.getPath());
                 }
                 else if(new File(checkdir.getPath()).isFile()){
-//                    Global.globalClient.uploadFile(checkdir.getPath(), checkdir.getName());
-                    this.uploadFile(checkdir.getPath(), checkdir.getName());
+//                    Global.globalClient.uploadFile(selectedItems);
+//                    this.uploadFile(checkdir.getPath(), checkdir.getName());
+                    this.uploadFile();
                     showTableRemoteFile(this.workftpdir);
                 }
             }catch(Exception e){
@@ -220,16 +231,11 @@ public class DashboardController {
         }
     }
 
-    private void multipleSelectMode(KeyEvent event){
-        if(event.getCode().equals("CONTROL")){
-            selectedItems = TableLocalView.getSelectionModel().getSelectedItems();
-        }
-    }
-
     private void clickOnRemoteTable(MouseEvent event){
         DirInfo checkdir = TableRemoteView.getSelectionModel().getSelectedItem();
+        selectedItemsftp = TableRemoteView.getSelectionModel().getSelectedItems();
 
-        if(!checkdir.getPath().isEmpty()){
+        if(!checkdir.getPath().isEmpty() || !selectedItemsftp.isEmpty()){
             this.filepathFTP = checkdir.getPath() +"/"+ checkdir.getName();
             deleteButton.setDisable(false);
             downloadButton.setDisable(false);
@@ -258,7 +264,7 @@ public class DashboardController {
 
     private void deleteOnRemote(){
         try{
-            Global.globalClient.deleteFile(this.filepathFTP);
+            Global.globalClient.deleteFile(this.selectedItemsftp);
             deleteButton.setDisable(true);
             showTableRemoteFile(this.workftpdir);
         }catch(Exception e){
@@ -297,23 +303,27 @@ public class DashboardController {
 
     private void downloadFile(){
         try{
-            Global.globalClient.downloadFile(this.filepathFTP, this.workftpdir);
+            Global.globalClient.downloadFile(this.selectedItemsftp);
+            showTableRemoteFile(this.workftpdir);
         }catch(Exception e){
             System.out.println(e);
         }
     }
 
-    private void uploadFile(String filepath, String name){
-        try{
-            Global.globalClient.uploadFile(filepath, name);
-        }catch(Exception e){
-            System.out.println(e);
-        }
-    }
+//    private void uploadFile(String filepath, String name){
+//        try{
+//            Global.globalClient.uploadFile(filepath, name);
+//        }catch(Exception e){
+//            System.out.println(e);
+//        }
+//    }
 
-    private void uploadFile(ObservableList<DirInfo> filepaths){
+    private void uploadFile(){
         try{
-            Global.globalClient.uploadFile(filepaths);
+            if(!this.selectedItemsLocal.isEmpty()){
+                Global.globalClient.uploadFile(this.selectedItemsLocal);
+                showTableRemoteFile(this.workftpdir);
+            }
         }catch(Exception e){
             System.out.println(e);
         }

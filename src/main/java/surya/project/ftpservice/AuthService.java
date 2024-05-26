@@ -55,15 +55,15 @@ public class AuthService {
         return files;
     }
 
-    public boolean uploadFile(String localpath, String remotename) throws FileNotFoundException, IOException {
-        File file = new File(localpath);
-        InputStream fileupload = new FileInputStream(file);
-        boolean result = ftpclient.storeFile(remotename, fileupload);
-        System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
-                System.currentTimeMillis(), remotename, result);
-
-        return result;
-    }
+//    public boolean uploadFile(String localpath, String remotename) throws FileNotFoundException, IOException {
+//        File file = new File(localpath);
+//        InputStream fileupload = new FileInputStream(file);
+//        boolean result = ftpclient.storeFile(remotename, fileupload);
+//        System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
+//                System.currentTimeMillis(), remotename, result);
+//
+//        return result;
+//    }
 
     public void uploadFile(ObservableList<DirInfo> localpaths) throws FileNotFoundException, IOException {
         for(DirInfo f: localpaths){
@@ -76,24 +76,26 @@ public class AuthService {
         }
     }
 
-    public boolean deleteFile(String remotepath) throws Exception {
+    public void deleteFile(ObservableList<DirInfo> listFiles) throws Exception {
 //        boolean checkDirorNot = ftpclient.changeWorkingDirectory(remotepath);
-        ftpclient.deleteFile(remotepath);
-
-        return ftpclient.removeDirectory(remotepath);
+        for(DirInfo file: listFiles){
+            String remotepath = file.getPath() +"/"+ file.getName();
+            ftpclient.deleteFile(remotepath);
+            ftpclient.removeDirectory(remotepath);
+        }
     }
 
-    public boolean downloadFile(String remotepath, String workftpdir) throws FileNotFoundException, IOException {
-        changeWorkDir(remotepath);
-        FTPFile f = ftpclient.mlistFile(remotepath);
-        String dir = new  File("").getAbsolutePath() + "/downloads/" + f.getName();
-//        File file = new File(dir);
-        FileOutputStream out = new FileOutputStream(dir);
-        changeWorkDir(workftpdir);
+    public void downloadFile(ObservableList<DirInfo> listFiles) throws FileNotFoundException, IOException {
+        for(DirInfo file: listFiles){
+            String remotepath = file.getPath() +"/"+ file.getName();
 
-        boolean result = ftpclient.retrieveFile(remotepath, out);
-        System.out.printf("[downloadFIle] [%d] is success to download file : %s -> %b \n", System.currentTimeMillis(), remotepath, result);
-        return result;
+            FTPFile f = ftpclient.mlistFile(remotepath);
+            String dir = new  File("").getAbsolutePath() + "/downloads/" + f.getName();
+            FileOutputStream out = new FileOutputStream(dir);
+
+            boolean result = ftpclient.retrieveFile(remotepath, out);
+            System.out.printf("[downloadFIle] [%d] is success to download file : %s -> %b \n", System.currentTimeMillis(), remotepath, result);
+        }
     }
 
     public boolean newDirectory(String remotepath) throws FileNotFoundException, IOException {
