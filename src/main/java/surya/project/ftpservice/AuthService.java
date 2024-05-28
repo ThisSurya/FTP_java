@@ -103,8 +103,9 @@ public class AuthService {
         return result;
     }
 
-    public void renameFolder(){
-
+    public void renameFolder(String path, String name) throws IOException {
+        FTPFile f = ftpclient.mlistFile(path);
+        f.setName(name);
     }
 
     public void changeWorkDir(String remotepath) throws FileNotFoundException, IOException {

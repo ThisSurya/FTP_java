@@ -317,6 +317,14 @@ public class DashboardController {
 //            System.out.println(e);
 //        }
 //    }
+    private void renameForm(){
+
+        try{
+            app.showRename();
+        }catch(Exception e){
+
+        }
+    }
 
     private void uploadFile(){
         try{
