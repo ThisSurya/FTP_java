@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPFile;
 import surya.project.GlobalAuth.Global;
 import surya.project.components.DirInfo;
@@ -55,12 +56,16 @@ public class DashboardController {
     private Button downloadButton;
     @FXML
     private Button uploadButton;
+    @FXML
+    private Button renameButton;
 
     private HelloApplication app;
 
 //
 //    UTILITIES FOR REMOVING, BACK DIRECTORY ETC.
 //
+    private Stage stage;
+
     private String filepathFTP;
     private String workftpdir;
     private Stack<String> lastpathftp;
@@ -69,6 +74,7 @@ public class DashboardController {
     private String worklocaldir;
     private ObservableList<DirInfo> selectedItemsLocal;
     private ObservableList<DirInfo> selectedItemsftp;
+    private String hisPath;
 
     public void Initialize(HelloApplication app) throws Exception {
         this.app = app;
@@ -116,7 +122,7 @@ public class DashboardController {
         backLocalButton.setDisable(true);
         backRemoteButton.setDisable(true);
         downloadButton.setDisable(true);
-
+        renameButton.setDisable(true);
 
 //
 //        FILL THE TABLE WITH CONTENT
@@ -136,6 +142,13 @@ public class DashboardController {
         backRemoteButton.setOnAction((event) -> {backDirectoryFTP();});
         downloadButton.setOnAction((event) -> {downloadFile();});
         uploadButton.setOnAction((event) -> {uploadFile();});
+        renameButton.setOnAction((event) -> {
+            try {
+                renameForm();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public void showTableLocalFile(String path) throws Exception {
@@ -169,34 +182,39 @@ public class DashboardController {
     public void showTableRemoteFile(String path) throws Exception {
 //        Check if lastPath have minimal a history path
         this.workftpdir = path;
-        Global.globalClient.changeWorkDir(workftpdir);
-        if(lastpathftp.empty()){
-            backRemoteButton.setDisable(true);
-        }else{
-            backRemoteButton.setDisable(false);
+        try{
+            Global.globalClient.changeWorkDir(workftpdir);
+            if(lastpathftp.empty()){
+                backRemoteButton.setDisable(true);
+            }else{
+                backRemoteButton.setDisable(false);
+            }
+
+            FTPFile[] files = Global.globalClient.getContent();
+            TableRemoteView.getItems().clear();
+            for(FTPFile f : files){
+                if(f.isFile()){
+                    DirInfo fil = new DirInfo(f.getName(),
+                            Global.globalClient.getClient().printWorkingDirectory(),
+                            "File",
+                            f.getSize(),
+                            f.getTimestamp().getTimeInMillis()
+                    );
+                    TableRemoteView.getItems().add(fil);
+                } else if (f.isDirectory()) {
+                    DirInfo fil = new DirInfo(f.getName(),
+                            Global.globalClient.getClient().printWorkingDirectory(),
+                            "Folder",
+                            f.getSize(),
+                            f.getTimestamp().getTimeInMillis()
+                    );
+                    TableRemoteView.getItems().add(fil);
+                }
+            }
+        }catch(Exception e){
+            System.out.println(e);
         }
 
-        FTPFile[] files = Global.globalClient.getContent();
-        TableRemoteView.getItems().clear();
-        for(FTPFile f : files){
-            if(f.isFile()){
-                DirInfo fil = new DirInfo(f.getName(),
-                        Global.globalClient.getClient().printWorkingDirectory(),
-                        "File",
-                        f.getSize(),
-                        f.getTimestamp().getTimeInMillis()
-                        );
-                TableRemoteView.getItems().add(fil);
-            } else if (f.isDirectory()) {
-                DirInfo fil = new DirInfo(f.getName(),
-                        Global.globalClient.getClient().printWorkingDirectory(),
-                        "Folder",
-                        f.getSize(),
-                        f.getTimestamp().getTimeInMillis()
-                );
-                TableRemoteView.getItems().add(fil);
-            }
-        }
     }
 
     private void clickOnLocalTable(MouseEvent event){
@@ -239,9 +257,11 @@ public class DashboardController {
             this.filepathFTP = checkdir.getPath() +"/"+ checkdir.getName();
             deleteButton.setDisable(false);
             downloadButton.setDisable(false);
+            renameButton.setDisable(false);
         }else {
             downloadButton.setDisable(true);
             deleteButton.setDisable(true);
+            renameButton.setDisable(true);
             System.out.println("Pliss if u want to delete a file select random file first!!");
         }
 
@@ -283,7 +303,7 @@ public class DashboardController {
 
     private void backDirectoryFTP(){
         try{
-            String hisPath = lastpathftp.pop();
+            this.hisPath = lastpathftp.pop();
             System.out.println(hisPath);
             showTableRemoteFile(hisPath);
         }catch(Exception e){
@@ -317,13 +337,15 @@ public class DashboardController {
 //            System.out.println(e);
 //        }
 //    }
-    private void renameForm(){
-
+    private void renameForm() throws Exception {
         try{
-            app.showRename();
+            app.showRename(this.filepathFTP);
         }catch(Exception e){
-
+            System.out.println(e);
+        }finally{
+            showTableRemoteFile(this.hisPath);
         }
+
     }
 
     private void uploadFile(){

@@ -6,14 +6,14 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.VBox?>
 
-
 <AnchorPane prefHeight="180.0" prefWidth="272.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="surya.project.eb_ftpjava.RenameController">
    <children>
       <VBox layoutX="20.0" layoutY="17.0" prefHeight="142.0" prefWidth="231.0">
          <children>
             <Label text="Rename Folder" />
-            <TextField prefHeight="0.0" prefWidth="231.0" />
-            <Button mnemonicParsing="false" text="Button" />
+            <TextField fx:id="renamefield" prefHeight="0.0" prefWidth="231.0" />
+            <Label fx:id="exceptionLabel" text="tidak boleh kosong!" textFill="RED" visible="false" />
+            <Button fx:id="submitbutton" mnemonicParsing="false" text="Ubah" />
          </children>
       </VBox>
    </children>

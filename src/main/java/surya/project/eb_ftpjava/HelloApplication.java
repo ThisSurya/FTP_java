@@ -3,6 +3,7 @@ package surya.project.eb_ftpjava;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import surya.project.ftpservice.AuthService;
 
@@ -37,8 +38,19 @@ public class HelloApplication extends Application {
         stage.show();
     }
 
-    public void showRename(){
-        
+    public void showRename(String path) throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rename-view.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 400, 400);
+        RenameController renameController = fxmlLoader.getController();
+
+        Stage childStage = new Stage();
+
+        childStage.initOwner(stage);
+        childStage.setResizable(false);
+        renameController.Initialize(childStage, path);
+        childStage.setTitle("Rename");
+        childStage.setScene(scene);
+        childStage.show();
     }
 
     public static void main(String[] args) {

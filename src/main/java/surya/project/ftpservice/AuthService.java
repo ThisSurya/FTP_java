@@ -1,6 +1,8 @@
 package surya.project.ftpservice;
 import java.io.*;
+import java.util.Stack;
 
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.apache.commons.net.PrintCommandListener;
 import org.apache.commons.net.ProtocolCommandListener;
@@ -12,9 +14,15 @@ import surya.project.components.DirInfo;
 
 public class AuthService {
     private static FTPClient ftpclient;
+    private ObservableList<DirInfo> childpath;
+    private String workdir;
+    private Stack<String> hispath;
 
     public AuthService(){
         ftpclient = new FTPClient();
+        this.workdir = "/";
+        hispath = new Stack<String>();
+        childpath = FXCollections.observableArrayList();
     }
     public void loginFtp(String hostname, int port, String username, String password) throws Exception {
         ftpclient.addProtocolCommandListener((ProtocolCommandListener) new PrintCommandListener(new PrintStream(System.out)));
@@ -55,24 +63,55 @@ public class AuthService {
         return files;
     }
 
-//    public boolean uploadFile(String localpath, String remotename) throws FileNotFoundException, IOException {
-//        File file = new File(localpath);
-//        InputStream fileupload = new FileInputStream(file);
-//        boolean result = ftpclient.storeFile(remotename, fileupload);
-//        System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
-//                System.currentTimeMillis(), remotename, result);
-//
-//        return result;
-//    }
-
     public void uploadFile(ObservableList<DirInfo> localpaths) throws FileNotFoundException, IOException {
         for(DirInfo f: localpaths){
             String path = f.getPath();
             File file = new File(path);
-            InputStream fileupload = new FileInputStream(file);
-            boolean result = ftpclient.storeFile(f.getName(), fileupload);
-            System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
-                    System.currentTimeMillis(), f.getName(), result);
+            if(file.isDirectory()){
+                hispath.push(this.workdir);
+                this.workdir = this.workdir + File.separator + file.getName();
+                this.changeWorkDir(this.workdir);
+                this.newDirectory(this.workdir);
+                this.renameFolder(this.workdir + File.separator + "New Folder", file.getName());
+                this.childpath = FXCollections.observableArrayList();
+                for(File childFile : file.listFiles()){
+                    if(childFile.exists()){
+                        this.childpath.add(new DirInfo(childFile.getName(),
+                                childFile.getAbsolutePath(), "Folder", childFile.length(), childFile.lastModified()));
+                    }else{
+
+                        break;
+                    }
+                }
+                uploadFile(childpath);
+            }else if(file.isFile()){
+                this.changeWorkDir(this.workdir);
+                try{
+                    InputStream fileupload = new FileInputStream(file);
+                    boolean result = ftpclient.storeFile(f.getName(), fileupload);
+                    System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
+                            System.currentTimeMillis(), f.getName(), result);
+                }catch (Exception e){
+                    System.out.println(e);
+                }
+
+            }
+        }
+        if(!hispath.isEmpty()){
+            this.changeWorkDir(hispath.pop());
+        }
+    }
+
+    public void uploadSingleFile(String localPath, String remotePath) throws  Exception{
+        File file = new File(localPath);
+        InputStream fileupload = new FileInputStream(file);
+
+        try {
+            ftpclient.storeFile(remotePath, fileupload);
+        }catch(Exception e){
+            System.out.println(e);
+        }finally{
+            fileupload.close();
         }
     }
 
@@ -90,6 +129,8 @@ public class AuthService {
             String remotepath = file.getPath() +"/"+ file.getName();
 
             FTPFile f = ftpclient.mlistFile(remotepath);
+
+
             String dir = new  File("").getAbsolutePath() + "/downloads/" + f.getName();
             FileOutputStream out = new FileOutputStream(dir);
 
@@ -103,12 +144,12 @@ public class AuthService {
         return result;
     }
 
-    public void renameFolder(String path, String name) throws IOException {
-        FTPFile f = ftpclient.mlistFile(path);
-        f.setName(name);
+    public boolean renameFolder(String path, String name) throws IOException {
+        return ftpclient.rename(path, name);
     }
 
     public void changeWorkDir(String remotepath) throws FileNotFoundException, IOException {
-        ftpclient.changeWorkingDirectory(remotepath);
+        this.workdir = remotepath;
+        ftpclient.changeWorkingDirectory(this.workdir);
     }
 }

@@ -49,7 +49,7 @@
                         <Button fx:id="createDirButton" mnemonicParsing="false" text="CREATE DIR" />
                         <Button fx:id="deleteButton" mnemonicParsing="false" text="DELETE" />
                         <Button fx:id="downloadButton" mnemonicParsing="false" text="DOWNLOAD" />
-                        <Button mnemonicParsing="false" text="NAMA" />
+                        <Button fx:id="renameButton" mnemonicParsing="false" text="NAMA" />
                      </items>
                   </ToolBar>
                </children>
