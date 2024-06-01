@@ -1,12 +1,13 @@
 package surya.project.ftpservice;
+
 import java.io.*;
+import java.util.Arrays;
 import java.util.Stack;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.apache.commons.net.PrintCommandListener;
 import org.apache.commons.net.ProtocolCommandListener;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
@@ -23,7 +24,7 @@ public class AuthService {
     private Stack<String> hispathlocal;
     private Stack<String> hispathftp;
 
-    public AuthService(){
+    public AuthService() {
         ftpclient = new FTPClient();
         this.workdirftp = "/";
         this.workdirlocal = new File("").getAbsolutePath();
@@ -32,32 +33,33 @@ public class AuthService {
         childpathlocal = FXCollections.observableArrayList();
         childpathftp = FXCollections.observableArrayList();
     }
+
     public void loginFtp(String hostname, int port, String username, String password) throws Exception {
         ftpclient.addProtocolCommandListener((ProtocolCommandListener) new PrintCommandListener(new PrintStream(System.out)));
 
-        try{
+        try {
             ftpclient.connect(hostname, port);
             int reply = ftpclient.getReplyCode();
-            if (!FTPReply.isPositiveCompletion(reply)){
+            if (!FTPReply.isPositiveCompletion(reply)) {
                 ftpclient.disconnect();
                 throw new Exception("FTP server refused connection");
             }
             boolean result = ftpclient.login(username, password);
-            if(!result){
+            if (!result) {
                 ftpclient.disconnect();
                 throw new Exception("FTP server refused to login");
             }
             ftpclient.changeWorkingDirectory("/");
-        }catch (Exception e){
+        } catch (Exception e) {
             System.out.println(e);
         }
     }
 
-    public boolean isConnected(){
+    public boolean isConnected() {
         return ftpclient.isConnected();
     }
 
-    public FTPClient getClient(){
+    public FTPClient getClient() {
         return this.ftpclient;
     }
 
@@ -72,121 +74,128 @@ public class AuthService {
     }
 
     public void uploadFile(ObservableList<DirInfo> localpaths) throws FileNotFoundException, IOException {
-        for(DirInfo f: localpaths){
+        for (DirInfo f : localpaths) {
             String path = f.getPath();
             File file = new File(path);
-            if(file.isDirectory()){
+            if (file.isDirectory()) {
                 hispathlocal.push(this.workdirftp);
                 this.workdirftp = this.workdirftp + File.separator + file.getName();
                 this.changeWorkDir(this.workdirftp);
                 this.newDirectory(this.workdirftp);
                 this.renameFolder(this.workdirftp + File.separator + "New Folder", file.getName());
                 this.childpathlocal = FXCollections.observableArrayList();
-                for(File childFile : file.listFiles()){
-                    if(childFile.exists()){
+                for (File childFile : file.listFiles()) {
+                    if (childFile.exists()) {
                         this.childpathlocal.add(new DirInfo(childFile.getName(),
                                 childFile.getAbsolutePath(), "Folder",
                                 childFile.length(), childFile.lastModified()));
-                    }else{
+                    } else {
                         break;
                     }
                 }
                 uploadFile(childpathlocal);
-            }else if(file.isFile()){
+            } else if (file.isFile()) {
                 this.changeWorkDir(this.workdirftp);
-                try{
+                try {
                     InputStream fileupload = new FileInputStream(file);
                     boolean result = ftpclient.storeFile(f.getName(), fileupload);
                     System.out.printf("[uploadFile] [%d] is success to upload file : %s -> %b \n",
                             System.currentTimeMillis(), f.getName(), result);
-                }catch (Exception e){
+                } catch (Exception e) {
                     System.out.println(e);
                 }
-
             }
         }
-        if(!hispathlocal.isEmpty()){
+        if (!hispathlocal.isEmpty()) {
             this.changeWorkDir(hispathlocal.pop());
         }
     }
 
     public void deleteFile(ObservableList<DirInfo> listFiles) throws Exception {
-//        boolean checkDirorNot = ftpclient.changeWorkingDirectory(remotepath);
-        for(DirInfo file: listFiles){
-            String remotepath = file.getPath() +"/"+ file.getName();
+        if(hispathftp.isEmpty()) {
+            hispathftp.push(this.workdirftp);
+        }
+
+        for (DirInfo file : listFiles) {
+            String remotepath = file.getPath() + "/" + file.getName();
             FTPFile filesftp = ftpclient.mlistFile(remotepath);
-            if(filesftp.isDirectory()){
+            if (filesftp.isDirectory()) {
                 FTPFile[] files = ftpclient.listFiles(remotepath);
-                if(files.length > 0){
-                    System.out.println("Total didalam: "+files.length);
+                long total = Arrays.stream(files).count();
+                if (total > 0) {
                     hispathftp.push(remotepath);
-                    this.changeWorkDir(remotepath);
                     childpathftp = FXCollections.observableArrayList();
-                    for (FTPFile subfile : ftpclient.listFiles(remotepath)) {
-                        if(subfile.isValid()){
-                            childpathftp.add(new DirInfo(subfile.getName(),
-                                    Global.globalClient.getClient().printWorkingDirectory(),
-                                    "File",
-                                    subfile.getSize(),
-                                    subfile.getTimestamp().getTimeInMillis()
-                            ));
-                        }else{
-                            break;
-                        }
+                    this.changeWorkDir(remotepath);
+                    for (FTPFile subfile : files) {
+                        childpathftp.add(new DirInfo(subfile.getName(),
+                                remotepath,
+                                "File",
+                                subfile.getSize(),
+                                subfile.getTimestamp().getTimeInMillis()
+                        ));
                     }
                     deleteFile(childpathftp);
                 }
+                if (!hispathftp.isEmpty()) {
+                    this.changeWorkDir(hispathftp.peek());
+                }
                 ftpclient.removeDirectory(remotepath);
-            }else{
+            } else {
                 ftpclient.deleteFile(remotepath);
             }
         }
-        if(!hispathftp.isEmpty()){
-            System.out.println("change workdir....");
+        if (!hispathftp.isEmpty()) {
             this.changeWorkDir(hispathftp.pop());
         }
     }
 
-    public void downloadFile(ObservableList<DirInfo> listFiles) throws FileNotFoundException, IOException {
-        for(DirInfo file: listFiles){
-            String remotepath = file.getPath() +"/"+ file.getName();
+    public void downloadDir(ObservableList<DirInfo> listFiles) throws FileNotFoundException, IOException {
+        for (DirInfo file : listFiles) {
+            String remotepath = file.getPath() + "/" + file.getName();
             FTPFile f = ftpclient.mlistFile(remotepath);
-            if(f.isDirectory()){
+            if (f.isDirectory()) {
                 hispathftp.push(remotepath);
-
                 String path = new File("").getAbsolutePath() + "/downloads/" + remotepath;
                 File localfile = new File(path);
                 boolean dircheck = localfile.mkdirs();
-                if(dircheck){
+                if (dircheck) {
                     childpathftp = FXCollections.observableArrayList();
                     this.changeWorkDir(remotepath);
-                    for(FTPFile subfile : ftpclient.listFiles(remotepath)){
-                        if(subfile.isValid()){
+                    for (FTPFile subfile : ftpclient.listFiles(remotepath)) {
+                        if (subfile.isValid()) {
                             childpathftp.add(new DirInfo(subfile.getName(),
                                     Global.globalClient.getClient().printWorkingDirectory(),
                                     "File",
                                     subfile.getSize(),
                                     subfile.getTimestamp().getTimeInMillis()
                             ));
-                        }
-                        else{
+                        } else {
                             break;
                         }
                     }
-                    downloadFile(childpathftp);
+                    downloadDir(childpathftp);
                 }
-            }else{
+            } else {
                 this.changeWorkDir(remotepath);
-                String dir = new  File("").getAbsolutePath() + "/downloads/" + remotepath;
+                String dir = new File("").getAbsolutePath() + "/downloads/" + remotepath;
                 FileOutputStream out = new FileOutputStream(dir);
 
                 boolean result = ftpclient.retrieveFile(remotepath, out);
                 System.out.printf("[downloadFIle] [%d] is success to download file : %s -> %b \n", System.currentTimeMillis(), remotepath, result);
             }
         }
-        if(!hispathftp.isEmpty()){
+        if (!hispathftp.isEmpty()) {
             this.changeWorkDir(hispathftp.pop());
         }
+    }
+
+    public void downloadFile(String path) throws Exception{
+        FTPFile f = ftpclient.mlistFile(path);
+        String dir = new File("").getAbsolutePath() + "/downloads/" + f.getName();
+        FileOutputStream out = new FileOutputStream(dir);
+
+        boolean result = ftpclient.retrieveFile(path, out);
+        System.out.printf("[downloadFIle] [%d] is success to download file : %s -> %b \n", System.currentTimeMillis(), path, result);
     }
 
     public boolean newDirectory(String remotepath) throws FileNotFoundException, IOException {

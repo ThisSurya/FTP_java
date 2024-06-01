@@ -1,24 +1,18 @@
 package surya.project.eb_ftpjava;
 
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import org.apache.commons.net.ftp.FTPFile;
 import surya.project.GlobalAuth.Global;
 import surya.project.components.DirInfo;
-import surya.project.components.FileInfo;
 import surya.project.dirtype.LocalDir;
-import surya.project.ftpservice.AuthService;
 //import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Stack;
 
 public class DashboardController {
@@ -140,7 +134,7 @@ public class DashboardController {
         createDirButton.setOnAction((event) -> {newDirectory();});
         backLocalButton.setOnAction((event) -> {backDirectoryLocal();});
         backRemoteButton.setOnAction((event) -> {backDirectoryFTP();});
-        downloadButton.setOnAction((event) -> {downloadFile();});
+        downloadButton.setOnAction((event) -> {downloadMultiFile();});
         uploadButton.setOnAction((event) -> {uploadFile();});
         renameButton.setOnAction((event) -> {
             try {
@@ -273,7 +267,7 @@ public class DashboardController {
 //                    Global.globalClient.changeWorkDir(this.filepathFTP);
                     showTableRemoteFile(this.filepathFTP);
                 }else {
-                    this.downloadFile();
+                    this.downloadSingleFile();
                 }
             }catch(Exception e){
                 System.out.println(e);
@@ -321,9 +315,18 @@ public class DashboardController {
         }
     }
 
-    private void downloadFile(){
+    private void downloadMultiFile(){
         try{
-            Global.globalClient.downloadFile(this.selectedItemsftp);
+            Global.globalClient.downloadDir(this.selectedItemsftp);
+            showTableRemoteFile(this.workftpdir);
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    private void downloadSingleFile(){
+        try{
+            Global.globalClient.downloadFile(this.filepathFTP);
             showTableRemoteFile(this.workftpdir);
         }catch(Exception e){
             System.out.println(e);
